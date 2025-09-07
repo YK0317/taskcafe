@@ -2,9 +2,9 @@ name: Simple CI/CD
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   GO_VERSION: '1.19'
@@ -51,14 +51,19 @@ jobs:
         
       - name: Run backend tests
         env:
-          DATABASE_URL: postgres://test_user:test_password@localhost:5432/taskcafe_test?sslmode=disable
+          TASKCAFE_DATABASE_HOST: localhost
+          TASKCAFE_DATABASE_USER: test_user
+          TASKCAFE_DATABASE_PASSWORD: test_password
+          TASKCAFE_DATABASE_NAME: taskcafe_test
+          TASKCAFE_DATABASE_PORT: 5432
+          TASKCAFE_DATABASE_SSLMODE: disable
         run: make test-backend
         
       - name: Run frontend tests
         run: make test-frontend
         
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: test-results
@@ -89,7 +94,7 @@ jobs:
         run: make build
         
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: build-artifacts
           path: |
@@ -125,6 +130,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, build]
     
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: taskcafe_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -135,6 +155,13 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           
       - name: Build and start application
+        env:
+          TASKCAFE_DATABASE_HOST: localhost
+          TASKCAFE_DATABASE_USER: test_user
+          TASKCAFE_DATABASE_PASSWORD: test_password
+          TASKCAFE_DATABASE_NAME: taskcafe_test
+          TASKCAFE_DATABASE_PORT: 5432
+          TASKCAFE_DATABASE_SSLMODE: disable
         run: |
           make build
           ./build/taskcafe &
