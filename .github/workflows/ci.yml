@@ -47,7 +47,12 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
           
       - name: Install dependencies
-        run: make deps
+        run: |
+          echo "Installing Go dependencies..."
+          go mod download
+          go mod tidy
+          echo "Installing frontend dependencies..."
+          cd frontend && npm ci
         
       - name: Run backend tests
         env:
@@ -57,10 +62,14 @@ jobs:
           TASKCAFE_DATABASE_NAME: taskcafe_test
           TASKCAFE_DATABASE_PORT: 5432
           TASKCAFE_DATABASE_SSLMODE: disable
-        run: make test-backend
+        run: |
+          echo "Running Go tests..."
+          go test -v ./...
         
       - name: Run frontend tests
-        run: make test-frontend
+        run: |
+          echo "Running frontend tests..."
+          cd frontend && npm test -- --coverage --watchAll=false
         
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -91,7 +100,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           
       - name: Build application
-        run: make build
+        run: |
+          echo "Building frontend..."
+          cd frontend && npm run build
+          echo "Building backend..."
+          go build -o build/taskcafe ./cmd/taskcafe
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

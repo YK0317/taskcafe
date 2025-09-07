@@ -17,7 +17,7 @@ import (
 
 	"github.com/jordanknott/taskcafe/internal/config"
 	"github.com/jordanknott/taskcafe/internal/db"
-	"github.com/jordanknott/taskcafe/internal/frontend"
+	// "github.com/jordanknott/taskcafe/internal/frontend"  // Commented out for simple build
 	"github.com/jordanknott/taskcafe/internal/graph"
 	"github.com/jordanknott/taskcafe/internal/jobs"
 	"github.com/jordanknott/taskcafe/internal/logger"
@@ -46,20 +46,21 @@ func (h FrontendHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := frontend.Frontend.Open(path)
-	if os.IsNotExist(err) || IsDir(f) {
-		index, err := frontend.Frontend.Open("index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.ServeContent(w, r, "index.html", time.Now(), index)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Simple file serving from filesystem (for development/simple build)
+	// Serve files from frontend/build directory
+	staticDir := "./frontend/build"
+	fullPath := filepath.Join(staticDir, path)
+	
+	// Check if file exists
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		// Serve index.html for SPA routing
+		indexPath := filepath.Join(staticDir, "index.html")
+		http.ServeFile(w, r, indexPath)
 		return
 	}
-	http.ServeContent(w, r, path, time.Now(), f)
+	
+	// Serve the requested file
+	http.ServeFile(w, r, fullPath)
 }
 
 // TaskcafeHandler contains all the route handlers

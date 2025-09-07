@@ -12,22 +12,20 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	"time"
-
 	"github.com/jordanknott/taskcafe/internal/db"
-	"github.com/jordanknott/taskcafe/internal/frontend"
+	// "github.com/jordanknott/taskcafe/internal/frontend" // Commented out for simple build
 	"github.com/jordanknott/taskcafe/internal/utils"
 )
 
-// Frontend serves the index.html file
+// Frontend serves the index.html file (simplified for development)
 func (h *TaskcafeHandler) Frontend(w http.ResponseWriter, r *http.Request) {
-	f, err := frontend.Frontend.Open("index.h")
-	if os.IsNotExist(err) {
-		log.Warning("does not exist")
-	} else if err != nil {
-		log.WithError(err).Error("frontend")
+	// Simple file serving from filesystem
+	indexPath := "./frontend/build/index.html"
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		http.Error(w, "Frontend not built. Run: cd frontend && npm run build", http.StatusNotFound)
+		return
 	}
-	http.ServeContent(w, r, "index.html", time.Now(), f)
+	http.ServeFile(w, r, indexPath)
 }
 
 // ProfileImageUpload handles a user uploading a new avatar profile image
