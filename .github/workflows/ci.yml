@@ -67,6 +67,8 @@ jobs:
           go test -v ./...
         
       - name: Run frontend tests
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           echo "Running frontend tests..."
           cd frontend && npm test -- --coverage --watchAll=false --passWithNoTests
@@ -110,6 +112,8 @@ jobs:
           cd frontend && npm ci --legacy-peer-deps
           
       - name: Build application
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
         run: |
           echo "Building frontend..."
           cd frontend && npm run build
