@@ -537,7 +537,7 @@ on:
 
 env:
   GO_VERSION: '1.19'
-  NODE_VERSION: '16'
+  NODE_VERSION: '14'
 
 jobs:
   test:
