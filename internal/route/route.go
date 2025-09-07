@@ -106,6 +106,7 @@ func NewRouter(dbConnection *sqlx.DB, redisClient *redis.Client, jobServer *mach
 		mux.Post("/auth/confirm", taskcafeHandler.ConfirmUser)
 		mux.Post("/auth/register", taskcafeHandler.RegisterUser)
 		mux.Get("/settings", taskcafeHandler.PublicSettings)
+		mux.Get("/health", taskcafeHandler.HealthHandler)
 		mux.Post("/logger", taskcafeHandler.HandleClientLog)
 	})
 	auth := AuthenticationMiddleware{*repository}
@@ -117,6 +118,8 @@ func NewRouter(dbConnection *sqlx.DB, redisClient *redis.Client, jobServer *mach
 	r.Group(func(mux chi.Router) {
 		mux.Use(auth.Middleware)
 		mux.Post("/users/me/avatar", taskcafeHandler.ProfileImageUpload)
+		mux.Mount("/tasks", priorityResource{}.Routes(taskcafeHandler))
+		mux.Mount("/reports", reportsResource{}.Routes(taskcafeHandler))
 		mux.Mount("/graphql", graph.NewHandler(*repository, appConfig, jobQueue, redisClient))
 	})
 

@@ -1,0 +1,61 @@
+# Simple production build for Taskcafe
+FROM node:18-alpine AS frontend
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci --only=production
+
+COPY frontend/ .
+RUN npm run build
+
+# Go backend builder
+FROM golang:1.19-alpine AS backend
+
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
+
+WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o taskcafe ./cmd/taskcafe
+
+# Final production image
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /root/
+
+# Copy binary from builder stage
+COPY --from=backend /app/taskcafe .
+
+# Copy frontend build from frontend builder
+COPY --from=frontend /app/frontend/build ./web/
+
+# Copy migrations (if needed)
+COPY migrations ./migrations/
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S taskcafe && \
+    adduser -S taskcafe -u 1001 -G taskcafe
+
+# Change ownership
+RUN chown -R taskcafe:taskcafe /root/
+
+USER taskcafe
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3333/health || exit 1
+
+EXPOSE 3333
+
+CMD ["./taskcafe"]

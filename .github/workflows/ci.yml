@@ -1,0 +1,152 @@
+name: Simple CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GO_VERSION: '1.19'
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: taskcafe_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+          
+      - name: Install dependencies
+        run: make deps
+        
+      - name: Run backend tests
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/taskcafe_test?sslmode=disable
+        run: make test-backend
+        
+      - name: Run frontend tests
+        run: make test-frontend
+        
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            coverage/
+            frontend/coverage/
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Build application
+        run: make build
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            build/
+            frontend/build/
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker image
+        run: docker build -f Dockerfile.simple -t taskcafe:latest .
+        
+      - name: Test Docker image
+        run: |
+          docker run -d --name test-app -e DATABASE_URL=sqlite://test.db taskcafe:latest
+          sleep 10
+          docker logs test-app
+          docker stop test-app
+          docker rm test-app
+
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Build and start application
+        run: |
+          make build
+          ./build/taskcafe &
+          APP_PID=$!
+          sleep 5
+          
+          # Test health endpoint
+          curl -f http://localhost:3333/health || exit 1
+          
+          # Test auth endpoints
+          curl -f -X POST http://localhost:3333/auth/reset-password \
+            -H "Content-Type: application/json" \
+            -d '{"email":"test@example.com"}' || exit 1
+          
+          kill $APP_PID

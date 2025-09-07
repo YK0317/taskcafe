@@ -277,6 +277,51 @@ func (h *TaskcafeHandler) ValidateAuthTokenHandler(w http.ResponseWriter, r *htt
 	}
 }
 
+// RequestPasswordResetData is the request data for password reset
+type RequestPasswordResetData struct {
+	Email string `json:"email"`
+}
+
+// RequestPasswordResetHandler handles password reset requests
+func (h *TaskcafeHandler) RequestPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
+	var requestData RequestPasswordResetData
+	err := json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		log.WithError(err).Error("issue decoding password reset request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Simple validation
+	if requestData.Email == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Email is required",
+		})
+		return
+	}
+
+	// Check if user exists (but don't reveal if email exists - security best practice)
+	_, err = h.repo.GetUserAccountByEmail(r.Context(), requestData.Email)
+	if err != nil {
+		// Always return success message regardless of whether email exists
+		log.WithFields(log.Fields{
+			"email": requestData.Email,
+		}).Info("password reset requested for email")
+	} else {
+		// TODO: In real implementation, generate reset token and send email
+		log.WithFields(log.Fields{
+			"email": requestData.Email,
+		}).Info("password reset token would be generated and sent")
+	}
+
+	// Always return success to prevent email enumeration
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "If email exists, reset instructions have been sent",
+	})
+}
+
 func (h *TaskcafeHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	userExists, err := h.repo.HasAnyUser(r.Context())
 	if err != nil {
@@ -348,5 +393,6 @@ func (rs authResource) Routes(taskcafeHandler TaskcafeHandler) chi.Router {
 	r.Post("/login", taskcafeHandler.LoginHandler)
 	r.Post("/logout", taskcafeHandler.LogoutHandler)
 	r.Post("/validate", taskcafeHandler.ValidateAuthTokenHandler)
+	r.Post("/reset-password", taskcafeHandler.RequestPasswordResetHandler)
 	return r
 }
