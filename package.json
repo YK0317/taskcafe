@@ -1,5 +1,5 @@
 {
-  "name": "taskcafe-backend",
+  "name": "taskcafe",
   "version": "1.0.0",
   "description": "TaskCafe backend API server",
   "main": "src/app.js",
