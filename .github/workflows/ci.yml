@@ -52,7 +52,7 @@ jobs:
           go mod download
           go mod tidy
           echo "Installing frontend dependencies..."
-          cd frontend && npm ci
+          cd frontend && npm ci --legacy-peer-deps
         
       - name: Run backend tests
         env:

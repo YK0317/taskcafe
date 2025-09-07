@@ -7,7 +7,7 @@ go mod tidy
 
 echo Installing frontend dependencies...
 cd frontend
-npm ci
+npm ci --legacy-peer-deps
 cd ..
 
 echo Building frontend...
