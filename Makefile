@@ -12,11 +12,11 @@ deps: ## Install dependencies
 	go mod download
 	go mod tidy
 	@echo "Installing frontend dependencies..."
-	cd frontend && npm ci
+	cd frontend && yarn install
 
 build: deps ## Build entire application
 	@echo "Building frontend..."
-	cd frontend && npm run build
+	cd frontend && yarn build
 	@echo "Building backend..."
 	go build -o build/taskcafe ./cmd/taskcafe
 
@@ -24,7 +24,7 @@ test: ## Run all tests
 	@echo "Running Go tests..."
 	go test ./...
 	@echo "Running frontend tests..."
-	cd frontend && npm test -- --watchAll=false
+	cd frontend && yarn test --watchAll=false
 
 test-backend: ## Run Go tests only
 	@echo "Running Go tests..."
@@ -32,7 +32,7 @@ test-backend: ## Run Go tests only
 
 test-frontend: ## Run React tests only
 	@echo "Running frontend tests..."
-	cd frontend && npm test -- --coverage --watchAll=false
+	cd frontend && yarn test --coverage --watchAll=false
 
 clean: ## Clean build artifacts
 	rm -rf build/
