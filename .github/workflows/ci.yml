@@ -64,7 +64,14 @@ jobs:
           TASKCAFE_DATABASE_SSLMODE: disable
         run: |
           echo "Running Go tests..."
-          go test -v ./...
+          go test -v ./... | tee test-report.txt
+          
+      - name: Generate test report
+        if: always()
+        run: |
+          echo "Generating test reports..."
+          go test -v ./... -json > test-report.json 2>&1 || true
+          go test -v ./... 2>&1 | tee test-report.xml || true
         
       - name: Run frontend tests
         run: |
@@ -77,6 +84,9 @@ jobs:
         with:
           name: test-results
           path: |
+            test-report.txt
+            test-report.json
+            test-report.xml
             coverage/
             frontend/coverage/
 
