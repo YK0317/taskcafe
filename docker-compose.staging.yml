@@ -1,0 +1,46 @@
+version: '3.8'
+ 
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskcafe-staging
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=staging
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_URI=mongodb://mongo:27017/taskcafe-staging
+      - PORT=3000
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    networks:
+      - taskcafe-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+ 
+  mongo:
+    image: mongo:6
+    container_name: taskcafe-mongo-staging
+    environment:
+      - MONGO_INITDB_DATABASE=taskcafe-staging
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - taskcafe-network
+    restart: unless-stopped
+ 
+volumes:
+  mongo-data:
+    driver: local
+ 
+networks:
+  taskcafe-network:
+    driver: bridge

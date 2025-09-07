@@ -1,0 +1,44 @@
+version: '3.8'
+ 
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskcafe-production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_URI=mongodb://mongo:27017/taskcafe-production
+      - PORT=3000
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - taskcafe-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+ 
+  mongo:
+    image: mongo:6
+    container_name: taskcafe-mongo-production
+    environment:
+      - MONGO_INITDB_DATABASE=taskcafe-production
+    volumes:
+      - mongo-data-prod:/data/db
+    networks:
+      - taskcafe-network
+    restart: always
+ 
+volumes:
+  mongo-data-prod:
+    driver: local
+ 
+networks:
+  taskcafe-network:
+    driver: bridge
