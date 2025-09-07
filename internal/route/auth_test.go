@@ -48,20 +48,6 @@ func TestRequestPasswordResetHandler_Simple(t *testing.T) {
 	}
 }
 
-			if tt.wantStatus == http.StatusOK {
-				var response map[string]string
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				if err != nil {
-					t.Errorf("Failed to unmarshal response: %v", err)
-				}
-				if response["message"] == "" {
-					t.Errorf("Expected message in response")
-				}
-			}
-		})
-	}
-}
-
 func TestLoginRequestValidation(t *testing.T) {
 	tests := []struct {
 		name     string
