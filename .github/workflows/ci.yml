@@ -8,7 +8,7 @@ on:
 
 env:
   GO_VERSION: '1.19'
-  NODE_VERSION: '14'
+  NODE_VERSION: '16'
 
 jobs:
   test:
@@ -56,8 +56,16 @@ jobs:
         working-directory: ./frontend
         run: |
           echo "Installing frontend dependencies..."
+          echo "Node.js version:"
+          node --version
+          echo "npm version:"
+          npm --version
+          echo "Checking package.json..."
+          cat package.json | head -20
+          echo "Cleaning npm cache..."
           npm cache clean --force
-          npm ci --legacy-peer-deps
+          echo "Installing dependencies..."
+          npm install --legacy-peer-deps --force
         env:
           CI: false
           NODE_OPTIONS: "--max-old-space-size=4096"
@@ -132,7 +140,7 @@ jobs:
         run: |
           echo "Installing frontend dependencies..."
           npm cache clean --force
-          npm ci --legacy-peer-deps
+          npm install --legacy-peer-deps --force
         env:
           CI: false
           NODE_OPTIONS: "--max-old-space-size=4096"
